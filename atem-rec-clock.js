@@ -146,11 +146,17 @@ atem.on('connected', () => {
       if (mode === 'recording') {
         // Transição recording -> stopped
         mode = 'stopped'
+        hasRecBase = false  // IMPORTANTE: impede que continue incrementando
         const text = `⏹ REC PARADO em: ${formatTimecode(lastShownTc)}`
         renderTerminal(text)
         renderFile(text)
       } else if (mode === 'idle') {
         const text = '⏺ Aguardando REC na ATEM...'
+        renderTerminal(text)
+        renderFile(text)
+      } else if (mode === 'stopped') {
+        // Mantém a mensagem de parado sem redesenhar
+        const text = `⏹ REC PARADO em: ${formatTimecode(lastShownTc)}`
         renderTerminal(text)
         renderFile(text)
       }
