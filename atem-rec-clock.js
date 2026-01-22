@@ -8,11 +8,10 @@ const fs = require('fs')
 const path = require('path')
 
 // ===== CONFIGURAÇÕES =====
-const ATEM_IP = '192.168.2.157'
+const ATEM_IP = '192.168.2.146'
 const FPS = Number(process.argv[2]) || 60          // ex: node atem-rec-clock.js 25
 const TXT_FILE = path.join(__dirname, 'rec-live.txt')
 const UPDATE_INTERVAL_MS = 100                     // 100ms é suave pro OBS
-const DEBOUNCE_MS = 500                            // 500ms pra detectar parada (reduzido de 1500ms)
 const RECONNECT_INTERVAL_MS = 5000                 // Tentar reconectar a cada 5s se desconectar
 
 // ===== FUNÇÕES =====
@@ -82,7 +81,6 @@ let lastShownTc = null
 
 // estados: 'idle' | 'recording' | 'stopped'
 let mode = 'idle'
-let lastRecSeenAt = 0
 let isConnected = false
 let reconnectTimer = null
 
@@ -131,18 +129,17 @@ atem.on('connected', () => {
     }
 
     const now = Date.now()
-    const recTc = atem.state?.recording?.duration
+    const recording = atem.state?.recording
+    const recState = recording?.status?.state
+    const recTc = recording?.duration
 
-    // ===== DETECÇÃO DE TC ATIVO =====
-    if (recTc) {
-      lastRecSeenAt = now
-    }
-
-    // Debounce: considera REC ativo se vimos TC nos últimos DEBOUNCE_MS
-    const recSignalActive = (now - lastRecSeenAt) < DEBOUNCE_MS
+    // ===== VERIFICAÇÃO CORRETA: usar status.state =====
+    // state: 0 = idle/stopped
+    // state: 1 = recording
+    const isRecording = (recState === 1)
 
     // ========== SEM REC / REC PARADO ==========
-    if (!recSignalActive) {
+    if (!isRecording) {
       if (mode === 'recording') {
         // Transição recording -> stopped
         mode = 'stopped'
@@ -155,16 +152,13 @@ atem.on('connected', () => {
         renderTerminal(text)
         renderFile(text)
       } else if (mode === 'stopped') {
-        // Mantém a mensagem de parado sem redesenhar
-        const text = `⏹ REC PARADO em: ${formatTimecode(lastShownTc)}`
-        renderTerminal(text)
-        renderFile(text)
+        // Mantém a mensagem de parado sem redesenhar constantemente
+        // (já foi renderizada na transição)
       }
-      // não zera baseFrames / lastShownTc, pra manter última info
       return
     }
 
-    // ========== REC ATIVO DETECTADO ==========
+    // ========== REC ATIVO DETECTADO (state === 1) ==========
 
     // ========== REC ACABOU DE COMEÇAR (ou já estava rodando) ==========
     if (mode !== 'recording') {
