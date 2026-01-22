@@ -10,6 +10,6 @@
     "start:30": "node atem-rec-clock.js 30"
   },
   "dependencies": {
-    "atem-connection": "^4.1.1"
+    "atem-connection": "^3.8.0"
   }
 }
