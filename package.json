@@ -1,0 +1,15 @@
+{
+  "name": "atem-rec-obs-timecode",
+  "version": "1.0.0",
+  "description": "Mostra o timecode de REC da ATEM no terminal e atualiza um TXT de uma linha para usar no OBS.",
+  "main": "atem-rec-clock.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node atem-rec-clock.js",
+    "start:60": "node atem-rec-clock.js 60",
+    "start:30": "node atem-rec-clock.js 30"
+  },
+  "dependencies": {
+    "atem-connection": "^4.1.1"
+  }
+}
