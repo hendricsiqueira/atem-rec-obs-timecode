@@ -1,18 +1,13 @@
 {
-  "name": "atem-rec-obs-timecode-python-gui-backend",
-  "version": "1.0.0",
-  "description": "Backend local de comunicação ATEM para a GUI Python do ATEM REC OBS Timecode.",
+  "name": "atem-rec-obs-timecode-python-gui",
+  "version": "2.0.0",
+  "description": "GUI Python nativa para ATEM REC OBS Timecode, sem dependência de Node.js em tempo de execução.",
   "private": true,
-  "type": "commonjs",
-  "main": "backend/atem_node_bridge.js",
   "scripts": {
     "setup": "bash scripts/install_all.sh",
-    "backend": "node backend/atem_node_bridge.js",
     "install:python": "python3 -m pip install -r requirements.txt",
     "start": "python3 app.py",
     "start:venv": "bash -lc 'source .venv/bin/activate && python app.py'"
   },
-  "dependencies": {
-    "atem-connection": "^3.8.0"
-  }
+  "dependencies": {}
 }

@@ -16,6 +16,8 @@ A versão atual inclui as seguintes melhorias:
 
 Além do script original em Node.js, este repositório agora inclui uma nova interface desktop em **Python/PySide6**, preparada para uso em **macOS 26 com Apple Silicon**. Ela fica na pasta [`python-gui`](./python-gui/) e permite configurar o IP da ATEM, FPS, arquivo TXT do OBS, status de conexão, status de REC e logs pela interface gráfica.
 
+A GUI agora usa comunicação ATEM **nativa em Python** com `pyatem`, portanto **não precisa de Node.js** para instalar, executar ou gerar o `.app`.
+
 Para instalar todas as bibliotecas necessárias e testar a GUI:
 
 ```bash
@@ -25,7 +27,7 @@ source .venv/bin/activate
 python app.py
 ```
 
-Também é possível usar o comando npm equivalente:
+Se preferir usar os atalhos via npm, eles continuam disponíveis apenas como conveniência de desenvolvimento:
 
 ```bash
 cd python-gui
@@ -34,9 +36,9 @@ npm run start:venv
 ```
 
 A documentação completa da versão com GUI está em [`python-gui/README.md`](./python-gui/README.md).
-
 ## Requisitos
-- macOS + Node.js (LTS recomendado)
+- Para o script original: macOS + Node.js LTS recomendado
+- Para a GUI Python: macOS + Python 3.11 ou superior, sem Node.js obrigatório
 - ATEM e Mac na mesma rede
 
 ## Instalação

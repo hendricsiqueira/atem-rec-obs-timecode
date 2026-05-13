@@ -3,25 +3,29 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-if ! command -v python3 >/dev/null 2>&1; then
+PYTHON_BIN="${PYTHON_BIN:-python3}"
+
+if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
   echo "Python 3 não encontrado. Instale Python 3.11+ antes de continuar." >&2
   exit 1
 fi
 
-if ! command -v node >/dev/null 2>&1; then
-  echo "Node.js não encontrado. Instale Node.js LTS antes de continuar." >&2
-  exit 1
+if [ ! -d ".venv" ]; then
+  echo "==> Ambiente .venv não encontrado. Executando instalação completa."
+  "$PYTHON_BIN" -m venv .venv
 fi
 
-python3 -m pip install -r requirements.txt
-npm install
+# shellcheck disable=SC1091
+source .venv/bin/activate
+
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 
 pyinstaller \
   --name "ATEM REC OBS Timecode" \
   --windowed \
   --clean \
-  --add-data "backend/atem_node_bridge.js:backend" \
-  --add-data "package.json:." \
+  --collect-all pyatem \
   app.py
 
 cat <<'MSG'
@@ -31,5 +35,6 @@ Build concluído.
 O app estará em:
   dist/ATEM REC OBS Timecode.app
 
-Observação: esta primeira versão empacota a GUI Python e o helper JavaScript, mas ainda espera que Node.js esteja instalado no macOS para executar o backend ATEM. Para distribuição sem dependência externa, o próximo passo é embutir um binário Node ARM64 dentro do .app.
+Esta versão é totalmente Python. O operador final não precisa instalar Node.js
+nem bibliotecas Python separadamente para executar o .app gerado pelo PyInstaller.
 MSG

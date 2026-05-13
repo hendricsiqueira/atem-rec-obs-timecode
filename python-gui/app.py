@@ -2,22 +2,22 @@
 """
 ATEM REC OBS Timecode GUI
 
-Aplicação desktop em Python/PySide6 para macOS, com backend de comunicação ATEM
-executado por um helper Node.js baseado em atem-connection. A GUI controla IP,
-FPS e arquivo TXT usado pelo OBS, preservando a lógica estável do projeto
-original para leitura do status REC/timecode.
+Aplicação desktop em Python/PySide6 para macOS. A comunicação com a ATEM é
+feita de forma nativa em Python usando pyatem, sem depender de Node.js em
+tempo de execução. A GUI monitora o estado REC e a duração da gravação da
+ATEM, atualizando um arquivo TXT de uma linha para uso como overlay no OBS.
 """
 
 from __future__ import annotations
 
-import json
 import os
-import shutil
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Event
 
-from PySide6.QtCore import QProcess, QSettings, Qt, QTimer
+from PySide6.QtCore import QProcess, QSettings, QThread, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QCloseEvent, QFont
 from PySide6.QtWidgets import (
     QApplication,
@@ -25,7 +25,6 @@ from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
     QFormLayout,
-    QFrame,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
@@ -60,15 +59,218 @@ class AppConfig:
     auto_clear_on_start: bool
 
 
+class AtemMonitorWorker(QThread):
+    """Thread de monitoramento ATEM totalmente em Python.
+
+    O pyatem fornece os campos nativos `recording-status` (`RTMS`) e
+    `recording-duration` (`RTMR`). A thread mantém a conexão em loop, escreve o
+    TXT de forma atômica e emite eventos simples para a GUI.
+    """
+
+    event = Signal(str, str)
+    log = Signal(str)
+
+    def __init__(self, cfg: AppConfig, output_path: Path) -> None:
+        super().__init__()
+        self.cfg = cfg
+        self.output_path = output_path
+        self.stop_event = Event()
+        self.switcher = None
+        self.is_connected = False
+        self.is_recording = False
+        self.mode = "idle"
+        self.base_frames: int | None = None
+        self.base_system_time: float | None = None
+        self.has_rec_base = False
+        self.last_duration = None
+        self.last_shown_tc = None
+        self.last_file_text = ""
+        self.last_emitted_text = ""
+        self.last_tick = 0.0
+
+    def request_stop(self) -> None:
+        self.stop_event.set()
+        self._close_transport_socket()
+
+    def run(self) -> None:  # noqa: D401 - método Qt
+        try:
+            from pyatem.protocol import AtemProtocol
+        except Exception as exc:  # pragma: no cover - depende do ambiente local
+            self.event.emit(
+                "error",
+                "Biblioteca pyatem não encontrada. Execute ./scripts/install_all.sh antes de abrir o app.",
+            )
+            self.log.emit(f"Falha ao importar pyatem: {exc}")
+            return
+
+        while not self.stop_event.is_set():
+            try:
+                self._reset_runtime_state()
+                self.switcher = AtemProtocol(ip=self.cfg.atem_ip)
+                self.switcher.on("connected", self._on_connected)
+                self.switcher.on("disconnected", self._on_disconnected)
+                self.switcher.on("change:recording-status", self._on_recording_status)
+                self.switcher.on("change:recording-duration", self._on_recording_duration)
+                self.log.emit(f"Conectando à ATEM em {self.cfg.atem_ip} (FPS: {self.cfg.fps})...")
+                self.switcher.connect()
+
+                while not self.stop_event.is_set():
+                    self.switcher.loop()
+                    self._publish_live_state()
+            except Exception as exc:
+                if self.stop_event.is_set():
+                    break
+                self.is_connected = False
+                self.event.emit("disconnected", "Desconectado da ATEM. Tentando reconectar...")
+                self.log.emit(f"Erro na conexão ATEM: {exc}")
+                self._close_transport_socket()
+                self._sleep_reconnect_interval()
+
+        self._close_transport_socket()
+        self.log.emit("Monitoramento encerrado.")
+
+    def _reset_runtime_state(self) -> None:
+        self.is_connected = False
+        self.is_recording = False
+        self.mode = "idle"
+        self.base_frames = None
+        self.base_system_time = None
+        self.has_rec_base = False
+        self.last_duration = None
+        self.last_shown_tc = None
+        self.last_tick = 0.0
+
+    def _sleep_reconnect_interval(self) -> None:
+        deadline = time.monotonic() + (self.cfg.reconnect_interval_ms / 1000)
+        while not self.stop_event.is_set() and time.monotonic() < deadline:
+            time.sleep(0.05)
+
+    def _close_transport_socket(self) -> None:
+        try:
+            transport = getattr(self.switcher, "transport", None)
+            sock = getattr(transport, "sock", None)
+            if sock:
+                sock.close()
+        except Exception:
+            pass
+
+    def _on_connected(self, *args) -> None:
+        self.is_connected = True
+        self.event.emit("connected", "Conectado! Sincronizando com o REC...")
+
+    def _on_disconnected(self, *args) -> None:
+        self.is_connected = False
+        self.event.emit("disconnected", "Desconectado da ATEM. Tentando reconectar...")
+
+    def _on_recording_status(self, status) -> None:
+        self.is_recording = bool(getattr(status, "is_recording", False))
+        self._publish_live_state(force=True)
+
+    def _on_recording_duration(self, duration) -> None:
+        self.last_duration = duration
+        if self.is_recording and self.mode != "recording":
+            self._start_recording_base(duration)
+        elif self.is_recording and not self.has_rec_base:
+            self._start_recording_base(duration)
+
+    def _start_recording_base(self, duration) -> None:
+        self.base_frames = self._tc_to_frames(duration)
+        self.base_system_time = time.monotonic()
+        self.has_rec_base = True
+        self.last_shown_tc = self._tc_tuple(duration)
+        self.mode = "recording"
+        self._publish("recording", f"🎥 REC INICIADO | {self._format_timecode(duration)}", force=True)
+
+    def _publish_live_state(self, force: bool = False) -> None:
+        now = time.monotonic()
+        if not force and (now - self.last_tick) < (self.cfg.update_interval_ms / 1000):
+            return
+        self.last_tick = now
+
+        if not self.is_connected:
+            return
+
+        if not self.is_recording:
+            if self.mode == "recording":
+                self.mode = "stopped"
+                self.has_rec_base = False
+                text = f"⏹ REC PARADO em: {self._format_timecode(self.last_shown_tc)}"
+                self._publish("stopped", text, force=True)
+            elif self.mode in {"idle", "stopped"}:
+                self.mode = "idle"
+                self._publish("idle", "⏺ Aguardando REC na ATEM...", force=force)
+            return
+
+        if self.mode != "recording":
+            if self.last_duration is None:
+                self.mode = "recording"
+                self._publish("waiting_tc", "🔴 REC DETECTADO, aguardando TC...", force=True)
+                return
+            self._start_recording_base(self.last_duration)
+            return
+
+        if self.mode == "recording" and self.has_rec_base and self.base_frames is not None and self.base_system_time is not None:
+            elapsed_ms = (now - self.base_system_time) * 1000
+            added_frames = int(elapsed_ms / (1000 / self.cfg.fps))
+            total_frames = self.base_frames + added_frames
+            local_tc = self._frames_to_tc(total_frames)
+            self.last_shown_tc = local_tc
+            self._publish("recording", f"🔴 GRAVANDO | REC TIME: {self._format_timecode(local_tc)}")
+
+    def _publish(self, event_type: str, text: str, force: bool = False) -> None:
+        self._atomic_write(self.output_path, text)
+        if force or text != self.last_emitted_text or event_type == "recording":
+            self.last_emitted_text = text
+            self.event.emit(event_type, text)
+
+    def _tc_to_frames(self, tc) -> int:
+        hours, minutes, seconds, frames = self._tc_tuple(tc)
+        return (((hours * 60 + minutes) * 60 + seconds) * self.cfg.fps) + frames
+
+    def _frames_to_tc(self, total_frames: int) -> tuple[int, int, int, int]:
+        frames = total_frames % self.cfg.fps
+        total_seconds = total_frames // self.cfg.fps
+        seconds = total_seconds % 60
+        total_minutes = total_seconds // 60
+        minutes = total_minutes % 60
+        hours = total_minutes // 60
+        return hours, minutes, seconds, frames
+
+    @staticmethod
+    def _tc_tuple(tc) -> tuple[int, int, int, int]:
+        if tc is None:
+            return 0, 0, 0, 0
+        if isinstance(tc, tuple):
+            return tuple(int(x or 0) for x in tc[:4])  # type: ignore[return-value]
+        return (
+            int(getattr(tc, "hours", 0) or 0),
+            int(getattr(tc, "minutes", 0) or 0),
+            int(getattr(tc, "seconds", 0) or 0),
+            int(getattr(tc, "frames", 0) or 0),
+        )
+
+    @classmethod
+    def _format_timecode(cls, tc) -> str:
+        hours, minutes, seconds, frames = cls._tc_tuple(tc)
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}:{frames:02d}"
+
+    def _atomic_write(self, path: Path, text: str) -> None:
+        if text == self.last_file_text:
+            return
+        self.last_file_text = text
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        tmp.write_text(text, encoding="utf-8")
+        os.replace(tmp, path)
+
+
 class AtemGui(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.settings = QSettings(ORG_NAME, APP_NAME)
-        self.process: QProcess | None = None
+        self.worker: AtemMonitorWorker | None = None
         self.is_running = False
-        self.current_status = "idle"
         self.script_dir = Path(__file__).resolve().parent
-        self.bridge_script = self.script_dir / "backend" / "atem_node_bridge.js"
         self.default_output = self.script_dir / "rec-live.txt"
 
         self.setWindowTitle(APP_NAME)
@@ -294,90 +496,45 @@ class AtemGui(QMainWindow):
             QMessageBox.warning(self, "Configuração inválida", str(exc))
             return
 
-        node_path = shutil.which("node")
-        if not node_path:
-            QMessageBox.critical(
-                self,
-                "Node.js não encontrado",
-                "O backend de comunicação com a ATEM usa o pacote atem-connection via Node.js. "
-                "Instale o Node.js LTS no macOS e execute npm install na pasta python-gui.",
-            )
-            return
-
-        if not self.bridge_script.exists():
-            QMessageBox.critical(self, "Backend não encontrado", f"Arquivo ausente: {self.bridge_script}")
-            return
-
-        package_dir = self.script_dir
-        node_modules = package_dir / "node_modules" / "atem-connection"
-        if not node_modules.exists():
-            QMessageBox.critical(
-                self,
-                "Dependências Node ausentes",
-                "Execute `npm install` dentro da pasta python-gui antes de iniciar a conexão.",
-            )
-            return
-
         output_path = Path(cfg.output_file).expanduser()
         output_path.parent.mkdir(parents=True, exist_ok=True)
         if cfg.auto_clear_on_start:
             self._atomic_write(output_path, "⏺ Aguardando REC na ATEM...")
 
         self._save_settings(cfg)
-        self.process = QProcess(self)
-        self.process.setWorkingDirectory(str(package_dir))
-        self.process.setProgram(node_path)
-        self.process.setArguments(
-            [
-                str(self.bridge_script),
-                "--ip",
-                cfg.atem_ip,
-                "--fps",
-                str(cfg.fps),
-                "--output",
-                str(output_path),
-                "--update-ms",
-                str(cfg.update_interval_ms),
-                "--reconnect-ms",
-                str(cfg.reconnect_interval_ms),
-            ]
-        )
-        self.process.readyReadStandardOutput.connect(self._read_stdout)
-        self.process.readyReadStandardError.connect(self._read_stderr)
-        self.process.finished.connect(self._process_finished)
-        self.process.errorOccurred.connect(self._process_error)
-        self.process.start()
+        self.worker = AtemMonitorWorker(cfg, output_path)
+        self.worker.event.connect(self._handle_worker_event)
+        self.worker.log.connect(self._log)
+        self.worker.finished.connect(self._worker_finished)
+        self.worker.start()
 
         self.is_running = True
         self.start_button.setEnabled(False)
         self.stop_button.setEnabled(True)
         self._set_inputs_enabled(False)
         self._apply_connecting_state(f"Conectando à ATEM em {cfg.atem_ip}...")
-        self._log(f"Iniciando monitoramento: IP={cfg.atem_ip}, FPS={cfg.fps}, TXT={output_path}")
+        self._log(f"Iniciando monitoramento Python nativo: IP={cfg.atem_ip}, FPS={cfg.fps}, TXT={output_path}")
 
     def stop_monitoring(self) -> None:
-        if self.process and self.process.state() != QProcess.NotRunning:
+        if self.worker and self.worker.isRunning():
             self._log("Parando monitoramento...")
-            self.process.terminate()
-            if not self.process.waitForFinished(2500):
-                self.process.kill()
-        self._reset_process_state("Monitoramento parado")
+            self.worker.request_stop()
+            if not self.worker.wait(2500):
+                self.worker.terminate()
+                self.worker.wait(1000)
+        self._reset_worker_state("Monitoramento parado")
 
-    def _process_finished(self, exit_code: int, exit_status: QProcess.ExitStatus) -> None:
-        status = "normal" if exit_status == QProcess.NormalExit else "com falha"
-        self._log(f"Processo finalizado ({status}), código {exit_code}.")
-        self._reset_process_state("Monitoramento finalizado")
+    def _worker_finished(self) -> None:
+        self._log("Thread de monitoramento finalizada.")
+        self._reset_worker_state("Monitoramento finalizado")
 
-    def _process_error(self, error: QProcess.ProcessError) -> None:
-        self._log(f"Erro no processo: {error.name}")
-
-    def _reset_process_state(self, message: str) -> None:
+    def _reset_worker_state(self, message: str) -> None:
         self.is_running = False
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(False)
         self._set_inputs_enabled(True)
         self._apply_idle_state(message)
-        self.process = None
+        self.worker = None
 
     def _set_inputs_enabled(self, enabled: bool) -> None:
         for widget in [
@@ -390,33 +547,7 @@ class AtemGui(QMainWindow):
         ]:
             widget.setEnabled(enabled)
 
-    def _read_stdout(self) -> None:
-        if not self.process:
-            return
-        data = bytes(self.process.readAllStandardOutput()).decode("utf-8", errors="replace")
-        for line in data.splitlines():
-            self._handle_bridge_line(line.strip())
-
-    def _read_stderr(self) -> None:
-        if not self.process:
-            return
-        data = bytes(self.process.readAllStandardError()).decode("utf-8", errors="replace")
-        for line in data.splitlines():
-            if line.strip():
-                self._log(f"Backend: {line.strip()}")
-
-    def _handle_bridge_line(self, line: str) -> None:
-        if not line:
-            return
-        try:
-            event = json.loads(line)
-        except json.JSONDecodeError:
-            self._log(line)
-            return
-
-        event_type = event.get("type", "log")
-        text = event.get("text") or event.get("message") or ""
-
+    def _handle_worker_event(self, event_type: str, text: str) -> None:
         if event_type == "connected":
             self._apply_connected_state(text or "Conectado à ATEM")
         elif event_type == "disconnected":
@@ -433,7 +564,7 @@ class AtemGui(QMainWindow):
             self._log(f"Erro: {text}")
             self.statusBar().showMessage(text)
         else:
-            self._log(text or line)
+            self._log(text)
 
     def _apply_idle_state(self, text: str) -> None:
         self.connection_badge.setText("DESCONECTADO")
@@ -511,12 +642,12 @@ class AtemGui(QMainWindow):
             "Sobre",
             "ATEM REC OBS Timecode\n\n"
             "GUI em Python para macOS/Apple Silicon.\n"
-            "A comunicação com a ATEM é feita por um helper local baseado em atem-connection, "
-            "mantendo compatibilidade com o comportamento do projeto Node.js original.",
+            "A comunicação com a ATEM é feita nativamente em Python com pyatem, "
+            "sem exigir Node.js no Mac do operador final.",
         )
 
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802 - API Qt
-        if self.process and self.process.state() != QProcess.NotRunning:
+        if self.worker and self.worker.isRunning():
             self.stop_monitoring()
         event.accept()
 
