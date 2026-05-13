@@ -17,18 +17,38 @@ if ! "$PYTHON_BIN" -m pip --version >/dev/null 2>&1; then
   "$PYTHON_BIN" -m ensurepip --upgrade
 fi
 
+pip_install() {
+  local description="$1"
+  shift
+
+  echo "==> ${description}"
+  if "$PYTHON_BIN" -m pip install --disable-pip-version-check "$@"; then
+    return 0
+  fi
+
+  cat <<'MSG'
+
+O pip recusou a instalação normal. Em macOS com Python instalado pelo Homebrew,
+isso costuma acontecer por causa do erro "externally-managed-environment".
+
+Tentando novamente com instalação no usuário, sem criar .venv:
+  --user --break-system-packages
+
+MSG
+
+  "$PYTHON_BIN" -m pip install --disable-pip-version-check --user --break-system-packages "$@"
+}
+
 # Mantém a instalação simples e direta, sem .venv.
 # Se quiser atualizar pip/setuptools/wheel explicitamente, execute:
 #   UPDATE_PIP=1 ./scripts/install_all.sh
 if [ "${UPDATE_PIP:-0}" = "1" ]; then
-  echo "==> Atualizando pip/setuptools/wheel no Python do sistema"
-  "$PYTHON_BIN" -m pip install --disable-pip-version-check --upgrade pip setuptools wheel
+  pip_install "Atualizando pip/setuptools/wheel" --upgrade pip setuptools wheel
 else
   echo "==> Pulando upgrade do pip; use UPDATE_PIP=1 para atualizar explicitamente"
 fi
 
-echo "==> Instalando bibliotecas Python diretamente no Python do sistema"
-"$PYTHON_BIN" -m pip install --disable-pip-version-check -r requirements.txt
+pip_install "Instalando bibliotecas Python" -r requirements.txt
 
 echo "==> Validando imports principais"
 "$PYTHON_BIN" - <<'PY'

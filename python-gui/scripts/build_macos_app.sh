@@ -12,8 +12,26 @@ fi
 
 echo "==> Usando Python do sistema: $($PYTHON_BIN --version)"
 
-echo "==> Instalando/validando dependências no Python do sistema"
-"$PYTHON_BIN" -m pip install --disable-pip-version-check -r requirements.txt
+pip_install_requirements() {
+  echo "==> Instalando/validando dependências no Python do sistema"
+  if "$PYTHON_BIN" -m pip install --disable-pip-version-check -r requirements.txt; then
+    return 0
+  fi
+
+  cat <<'MSG'
+
+O pip recusou a instalação normal. Em macOS com Python instalado pelo Homebrew,
+isso costuma acontecer por causa do erro "externally-managed-environment".
+
+Tentando novamente com instalação no usuário, sem criar .venv:
+  --user --break-system-packages
+
+MSG
+
+  "$PYTHON_BIN" -m pip install --disable-pip-version-check --user --break-system-packages -r requirements.txt
+}
+
+pip_install_requirements
 
 echo "==> Validando imports antes do build"
 "$PYTHON_BIN" - <<'PY'

@@ -18,11 +18,19 @@ Além do script original em Node.js, este repositório agora inclui uma nova int
 
 A GUI agora usa comunicação ATEM **nativa em Python** com `pyatem`, portanto **não precisa de Node.js** para instalar, executar ou gerar o `.app`.
 
-Para instalar todas as bibliotecas necessárias e testar a GUI no macOS ou Linux, usando o Python direto do sistema:
+Para instalar todas as bibliotecas necessárias e testar a GUI no macOS ou Linux, usando o Python direto do sistema, primeiro tente:
 
 ```bash
 cd python-gui
 python3 -m pip install -r requirements.txt
+python3 app.py
+```
+
+Se o Python do seu Mac foi instalado pelo Homebrew e aparecer o erro `externally-managed-environment`, use a instalação no espaço do usuário:
+
+```bash
+cd python-gui
+python3 -m pip install --user --break-system-packages -r requirements.txt
 python3 app.py
 ```
 

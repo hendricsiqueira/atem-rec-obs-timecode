@@ -30,17 +30,24 @@ Antes de executar pelo código-fonte, instale os seguintes componentes no comput
 
 A instalação agora segue o fluxo mais direto possível: **usar o Python do sistema**, instalar as bibliotecas nele e abrir a aplicação com `python3 app.py`. Nenhum ambiente virtual `.venv` é criado ou exigido.
 
-No macOS ou Linux, dentro da pasta `python-gui`, execute:
-
-```bash
-python3 -m pip install PySide6 pyatem pyusb pyinstaller
-python3 app.py
-```
-
-Se preferir usar o arquivo `requirements.txt`, o comando equivalente é:
+No macOS ou Linux, dentro da pasta `python-gui`, primeiro tente o comando normal:
 
 ```bash
 python3 -m pip install -r requirements.txt
+python3 app.py
+```
+
+Em muitos Macs com Python instalado pelo Homebrew, o `pip` pode mostrar o erro `externally-managed-environment`. Isso é uma proteção do Homebrew/PEP 668 para evitar instalação global acidental dentro do Python gerenciado pelo sistema. Nesse caso, use o comando abaixo, que instala as bibliotecas no espaço do seu usuário e não cria `.venv`:
+
+```bash
+python3 -m pip install --user --break-system-packages -r requirements.txt
+python3 app.py
+```
+
+Se preferir instalar informando as bibliotecas manualmente, o comando equivalente no macOS Homebrew é:
+
+```bash
+python3 -m pip install --user --break-system-packages PySide6 pyatem pyusb pyinstaller
 python3 app.py
 ```
 
@@ -57,11 +64,12 @@ Também existe um instalador de conveniência para macOS/Linux:
 ./scripts/install_all.sh
 ```
 
-Esse script apenas executa a instalação direta no Python do sistema. **Node.js não é necessário** para instalar, executar ou empacotar a GUI Python.
+Esse script tenta a instalação normal e, se o Python do Homebrew bloquear com `externally-managed-environment`, refaz automaticamente a instalação com `--user --break-system-packages`. **Node.js não é necessário** para instalar, executar ou empacotar a GUI Python.
 
 | Sistema | Instalar bibliotecas | Abrir a GUI |
 |---|---|---|
-| macOS/Linux | `python3 -m pip install -r requirements.txt` | `python3 app.py` |
+| macOS/Linux normal | `python3 -m pip install -r requirements.txt` | `python3 app.py` |
+| macOS com Homebrew bloqueando pip | `python3 -m pip install --user --break-system-packages -r requirements.txt` | `python3 app.py` |
 | Windows | `py -m pip install -r requirements.txt` | `py app.py` |
 
 Se você preferir usar os atalhos definidos no `package.json`, também pode executar `npm run setup` e `npm run start`, mas eles são apenas conveniência de desenvolvimento. Eles não significam que o aplicativo dependa de Node.js.
@@ -106,7 +114,7 @@ Para Windows, a ideia é a mesma, mas o executável precisa ser gerado em uma m�
 
 | Problema | Causa provável | Solução |
 |---|---|---|
-| “Biblioteca pyatem não encontrada” ou `No module named 'usb'` | As dependências ainda não foram instaladas no Python usado para abrir o app. | No macOS/Linux, execute `python3 -m pip install -r requirements.txt`; no Windows, execute `py -m pip install -r requirements.txt`. |
+| “Biblioteca pyatem não encontrada” ou `No module named 'usb'` | As dependências ainda não foram instaladas no Python usado para abrir o app. | No macOS/Linux, execute `python3 -m pip install -r requirements.txt`; se aparecer `externally-managed-environment`, use `python3 -m pip install --user --break-system-packages -r requirements.txt`; no Windows, execute `py -m pip install -r requirements.txt`. |
 | Não conecta na ATEM | IP incorreto ou redes diferentes. | Confirme o IP no ATEM Software Control e teste `ping IP_DA_ATEM`. |
 | OBS não atualiza | Fonte de texto não está lendo o arquivo correto. | Verifique se o OBS aponta para o mesmo TXT selecionado na aplicação. |
 | Timecode em velocidade errada | FPS configurado diferente da gravação. | Ajuste o FPS na interface para 30, 60 ou o valor usado no projeto. |
