@@ -16,15 +16,21 @@ A versão atual inclui as seguintes melhorias:
 
 Além do script original em Node.js, este repositório agora inclui uma nova interface desktop em **Python/PySide6**, preparada para uso em **macOS 26 com Apple Silicon**. Ela fica na pasta [`python-gui`](./python-gui/) e permite configurar o IP da ATEM, FPS, arquivo TXT do OBS, status de conexão, status de REC e logs pela interface gráfica.
 
-Para testar a GUI:
+Para instalar todas as bibliotecas necessárias e testar a GUI:
 
 ```bash
 cd python-gui
-python3 -m venv .venv
+./scripts/install_all.sh
 source .venv/bin/activate
-python3 -m pip install -r requirements.txt
-npm install
-python3 app.py
+python app.py
+```
+
+Também é possível usar o comando npm equivalente:
+
+```bash
+cd python-gui
+npm run setup
+npm run start:venv
 ```
 
 A documentação completa da versão com GUI está em [`python-gui/README.md`](./python-gui/README.md).

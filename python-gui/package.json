@@ -6,9 +6,11 @@
   "type": "commonjs",
   "main": "backend/atem_node_bridge.js",
   "scripts": {
+    "setup": "bash scripts/install_all.sh",
     "backend": "node backend/atem_node_bridge.js",
     "install:python": "python3 -m pip install -r requirements.txt",
-    "start": "python3 app.py"
+    "start": "python3 app.py",
+    "start:venv": "bash -lc 'source .venv/bin/activate && python app.py'"
   },
   "dependencies": {
     "atem-connection": "^3.8.0"

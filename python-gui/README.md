@@ -29,14 +29,31 @@ Antes de executar, instale os seguintes componentes no Mac:
 
 ## Instalação para desenvolvimento/uso local
 
-Dentro da pasta `python-gui`, execute:
+Dentro da pasta `python-gui`, execute este **comando único** para instalar todas as bibliotecas necessárias de Python e Node.js:
 
 ```bash
-python3 -m venv .venv
+./scripts/install_all.sh
+```
+
+Se você preferir executar via npm, o comando equivalente é:
+
+```bash
+npm run setup
+```
+
+O instalador cria o ambiente virtual `.venv`, atualiza o `pip`, instala as bibliotecas Python listadas em `requirements.txt` e instala as dependências Node.js necessárias para o backend ATEM.
+
+Depois da instalação, abra a aplicação com:
+
+```bash
 source .venv/bin/activate
-python3 -m pip install -r requirements.txt
-npm install
-python3 app.py
+python app.py
+```
+
+Ou use o atalho:
+
+```bash
+npm run start:venv
 ```
 
 Se preferir não usar ambiente virtual, é possível instalar diretamente no Python do sistema, mas o ambiente virtual é recomendado para evitar conflitos.
@@ -80,7 +97,7 @@ Nesta primeira versão, o `.app` empacota a GUI Python e inclui o helper JavaScr
 | Problema | Causa provável | Solução |
 |---|---|---|
 | “Node.js não encontrado” | Node.js não está instalado ou não está no `PATH`. | Instale Node.js LTS para macOS ARM64 e reabra o app/Terminal. |
-| “Dependências Node ausentes” | `npm install` não foi executado em `python-gui`. | Execute `npm install` nessa pasta. |
+| “Dependências Node ausentes” | O instalador ainda não foi executado em `python-gui`. | Execute `./scripts/install_all.sh` nessa pasta. |
 | Não conecta na ATEM | IP incorreto ou redes diferentes. | Confirme o IP no ATEM Software Control e teste `ping IP_DA_ATEM`. |
 | OBS não atualiza | Fonte de texto não está lendo o arquivo correto. | Verifique se o OBS aponta para o mesmo TXT selecionado na aplicação. |
 | Timecode em velocidade errada | FPS configurado diferente da gravação. | Ajuste o FPS na interface para 30, 60 ou o valor usado no projeto. |
