@@ -5,9 +5,9 @@ Este documento descreve os testes recomendados para validar o funcionamento da v
 ## Pré-requisitos
 
 - ATEM Mini Extreme ISO conectada à rede
-- Mac com Node.js instalado
-- Script instalado com `npm install`
-- IP da ATEM configurado corretamente em `atem-rec-clock.js`
+- Mac com Python 3.11 ou superior instalado
+- Dependências Python instaladas com `python3 -m pip install --user --break-system-packages -r python-gui/requirements.txt`
+- IP da ATEM configurado na interface gráfica Python
 
 ## Cenários de Teste
 
@@ -17,7 +17,7 @@ Este documento descreve os testes recomendados para validar o funcionamento da v
 
 **Passos**:
 1. Certifique-se de que a ATEM NÃO está gravando (REC desligado)
-2. Execute: `node atem-rec-clock.js`
+2. Execute a GUI Python: `cd python-gui && python3 app.py`
 3. Observe o terminal
 
 **Resultado Esperado**:
@@ -35,7 +35,7 @@ Este documento descreve os testes recomendados para validar o funcionamento da v
 **Objetivo**: Verificar se o script detecta e sincroniza quando REC é iniciado.
 
 **Passos**:
-1. Execute o script conforme Teste 1 (aguardando REC)
+1. Deixe a GUI Python conforme Teste 1 (aguardando REC)
 2. Na ATEM, pressione REC para iniciar gravação
 3. Observe o terminal e o arquivo `rec-live.txt`
 
@@ -75,7 +75,7 @@ Este documento descreve os testes recomendados para validar o funcionamento da v
 **Passos**:
 1. Na ATEM, inicie uma gravação (REC ativo)
 2. Aguarde alguns segundos (ex: 5-10 segundos de gravação)
-3. Execute: `node atem-rec-clock.js`
+3. Execute a GUI Python: `cd python-gui && python3 app.py`
 4. Observe o terminal
 
 **Resultado Esperado**:
@@ -94,7 +94,7 @@ Este documento descreve os testes recomendados para validar o funcionamento da v
 **Objetivo**: Verificar se o script funciona corretamente em múltiplos ciclos de gravação.
 
 **Passos**:
-1. Execute o script
+1. Execute a GUI Python
 2. Inicie REC na ATEM (deixe gravar por 5-10 segundos)
 3. Pare REC (deixe parado por 2-3 segundos)
 4. Inicie REC novamente
@@ -116,7 +116,7 @@ Este documento descreve os testes recomendados para validar o funcionamento da v
 **Objetivo**: Verificar se o script reconecta automaticamente após desconexão.
 
 **Passos**:
-1. Execute o script
+1. Execute a GUI Python
 2. Desconecte a ATEM da rede (ou desligue-a)
 3. Observe o terminal por 10-15 segundos
 4. Reconecte a ATEM à rede (ou ligue-a)
@@ -138,11 +138,12 @@ Este documento descreve os testes recomendados para validar o funcionamento da v
 **Objetivo**: Verificar se o script funciona corretamente com diferentes FPS.
 
 **Passos**:
-1. Execute com 30 FPS: `node atem-rec-clock.js 30`
-2. Inicie REC e deixe gravar por 10 segundos
-3. Observe o incremento de frames (deve chegar a ~300 frames em 10s com 30 FPS)
-4. Repita com 60 FPS: `node atem-rec-clock.js 60`
-5. Observe o incremento de frames (deve chegar a ~600 frames em 10s com 60 FPS)
+1. Abra a GUI Python: `cd python-gui && python3 app.py`
+2. Selecione 30 FPS no campo de FPS da interface
+3. Inicie REC e deixe gravar por 10 segundos
+4. Observe o incremento de frames (deve chegar a ~300 frames em 10s com 30 FPS)
+5. Repita selecionando 60 FPS na interface
+6. Observe o incremento de frames (deve chegar a ~600 frames em 10s com 60 FPS)
 
 **Resultado Esperado**:
 - Com 30 FPS: frames incrementam até 29, depois resetam para 0
@@ -159,7 +160,7 @@ Este documento descreve os testes recomendados para validar o funcionamento da v
 **Objetivo**: Verificar se o arquivo `rec-live.txt` funciona corretamente no OBS.
 
 **Passos**:
-1. Execute o script
+1. Execute a GUI Python
 2. No OBS, adicione uma fonte "Text (GDI+)"
 3. Marque "Read from file"
 4. Selecione o arquivo `rec-live.txt`
@@ -182,7 +183,7 @@ Este documento descreve os testes recomendados para validar o funcionamento da v
 **Objetivo**: Verificar se o script encerra corretamente.
 
 **Passos**:
-1. Execute o script
+1. Execute a GUI Python
 2. Deixe rodando por alguns segundos
 3. Pressione Ctrl+C no terminal
 
