@@ -57,11 +57,15 @@ A documentação completa da versão com GUI está em [`python-gui/README.md`](.
 - ATEM e computador na mesma rede
 
 ## Instalação
-No Terminal, dentro da pasta do projeto:
+Para usar a **GUI Python**, entre na pasta `python-gui` e instale as dependências Python:
 
 ```bash
-npm install
+cd python-gui
+python3 -m pip install --user --break-system-packages -r requirements.txt
+python3 app.py
 ```
+
+A parte em Node.js é mantida apenas como implementação legada do script original. Para o aplicativo com interface gráfica, **não há Node.js obrigatório**.
 
 ## Configuração
 Abra o arquivo **`atem-rec-clock.js`** e ajuste o IP da ATEM nesta linha:
