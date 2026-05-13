@@ -18,13 +18,20 @@ Além do script original em Node.js, este repositório agora inclui uma nova int
 
 A GUI agora usa comunicação ATEM **nativa em Python** com `pyatem`, portanto **não precisa de Node.js** para instalar, executar ou gerar o `.app`.
 
-Para instalar todas as bibliotecas necessárias e testar a GUI:
+Para instalar todas as bibliotecas necessárias e testar a GUI no macOS ou Linux, usando o Python direto do sistema:
 
 ```bash
 cd python-gui
-./scripts/install_all.sh
-source .venv/bin/activate
-python app.py
+python3 -m pip install -r requirements.txt
+python3 app.py
+```
+
+No Windows, o mesmo fluxo normalmente fica assim:
+
+```powershell
+cd python-gui
+py -m pip install -r requirements.txt
+py app.py
 ```
 
 Se preferir usar os atalhos via npm, eles continuam disponíveis apenas como conveniência de desenvolvimento:
@@ -32,14 +39,14 @@ Se preferir usar os atalhos via npm, eles continuam disponíveis apenas como con
 ```bash
 cd python-gui
 npm run setup
-npm run start:venv
+npm run start
 ```
 
 A documentação completa da versão com GUI está em [`python-gui/README.md`](./python-gui/README.md).
 ## Requisitos
 - Para o script original: macOS + Node.js LTS recomendado
-- Para a GUI Python: macOS + Python 3.11 ou superior, sem Node.js obrigatório
-- ATEM e Mac na mesma rede
+- Para a GUI Python: macOS, Linux ou Windows + Python 3.11 ou superior, sem Node.js obrigatório
+- ATEM e computador na mesma rede
 
 ## Instalação
 No Terminal, dentro da pasta do projeto:

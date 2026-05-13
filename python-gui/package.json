@@ -6,8 +6,7 @@
   "scripts": {
     "setup": "bash scripts/install_all.sh",
     "install:python": "python3 -m pip install -r requirements.txt",
-    "start": "python3 app.py",
-    "start:venv": "bash -lc 'source .venv/bin/activate && python app.py'"
+    "start": "python3 app.py"
   },
   "dependencies": {}
 }

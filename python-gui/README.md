@@ -1,6 +1,6 @@
-# ATEM REC OBS Timecode — GUI Python para macOS
+# ATEM REC OBS Timecode — GUI Python
 
-Esta pasta contém a versão desktop do projeto **ATEM REC OBS Timecode**, criada em **Python com PySide6** e pensada para uso em **macOS 26 com processador Apple Silicon**. O objetivo é oferecer uma interface gráfica simples para configurar o IP da ATEM, selecionar o FPS, escolher o arquivo TXT lido pelo OBS e acompanhar o estado de gravação em tempo real.
+Esta pasta contém a versão desktop do projeto **ATEM REC OBS Timecode**, criada em **Python com PySide6** e pensada principalmente para uso em **macOS 26 com processador Apple Silicon**, mas mantendo execução simples também em outros sistemas que tenham Python compatível. O objetivo é oferecer uma interface gráfica simples para configurar o IP da ATEM, selecionar o FPS, escolher o arquivo TXT lido pelo OBS e acompanhar o estado de gravação em tempo real.
 
 A aplicação mantém o mesmo fluxo do projeto original: ela monitora o estado de REC da ATEM, calcula o timecode localmente a partir do timecode recebido e grava um arquivo `rec-live.txt` com **uma única linha**, adequado para a fonte de texto do OBS configurada com leitura de arquivo.
 
@@ -16,41 +16,55 @@ A interface é escrita em Python/PySide6 e a comunicação com a ATEM agora é f
 
 > A biblioteca PyATEMMax também foi avaliada. Ela possui uma boa estrutura de conexão/eventos, mas a versão inspecionada não expõe claramente os campos de gravação e duração necessários para este fluxo. Por isso, a implementação nativa usa `pyatem`, que já decodifica `RTMS` como `recording-status` e `RTMR` como `recording-duration`.
 
-## Requisitos no macOS 26 Apple Silicon
+## Requisitos
 
-Antes de executar pelo código-fonte, instale os seguintes componentes no Mac:
+Antes de executar pelo código-fonte, instale os seguintes componentes no computador:
 
 | Requisito | Versão recomendada | Observação |
 |---|---:|---|
-| Python | 3.11 ou superior | Preferencialmente versão ARM64 nativa para Apple Silicon. |
+| Python | 3.11 ou superior | No macOS Apple Silicon, preferencialmente versão ARM64 nativa. No Windows, use o instalador oficial do Python e o comando `py`. |
 | OBS | Atual | Para ler o arquivo TXT como fonte de texto. |
-| ATEM e Mac | mesma rede | O IP configurado precisa apontar para a ATEM. |
+| ATEM e computador | mesma rede | O IP configurado precisa apontar para a ATEM. |
 
 ## Instalação para desenvolvimento/uso local
 
-Dentro da pasta `python-gui`, execute este **comando único** para instalar todas as bibliotecas necessárias:
+A instalação agora segue o fluxo mais direto possível: **usar o Python do sistema**, instalar as bibliotecas nele e abrir a aplicação com `python3 app.py`. Nenhum ambiente virtual `.venv` é criado ou exigido.
+
+No macOS ou Linux, dentro da pasta `python-gui`, execute:
+
+```bash
+python3 -m pip install PySide6 pyatem pyusb pyinstaller
+python3 app.py
+```
+
+Se preferir usar o arquivo `requirements.txt`, o comando equivalente é:
+
+```bash
+python3 -m pip install -r requirements.txt
+python3 app.py
+```
+
+No Windows, depois de instalar o Python 3.11 ou superior, o comando normalmente fica assim dentro da pasta `python-gui`:
+
+```powershell
+py -m pip install PySide6 pyatem pyusb pyinstaller
+py app.py
+```
+
+Também existe um instalador de conveniência para macOS/Linux:
 
 ```bash
 ./scripts/install_all.sh
 ```
 
-O instalador cria o ambiente virtual `.venv`, atualiza o `pip` e instala as bibliotecas Python listadas em `requirements.txt`. **Node.js não é necessário**.
+Esse script apenas executa a instalação direta no Python do sistema. **Node.js não é necessário** para instalar, executar ou empacotar a GUI Python.
 
-Depois da instalação, abra a aplicação com:
+| Sistema | Instalar bibliotecas | Abrir a GUI |
+|---|---|---|
+| macOS/Linux | `python3 -m pip install -r requirements.txt` | `python3 app.py` |
+| Windows | `py -m pip install -r requirements.txt` | `py app.py` |
 
-```bash
-source .venv/bin/activate
-python app.py
-```
-
-Se você preferir usar os atalhos definidos no `package.json`, também pode executar:
-
-```bash
-npm run setup
-npm run start:venv
-```
-
-Esses atalhos são apenas conveniência de desenvolvimento. Eles não significam que o aplicativo dependa de Node.js.
+Se você preferir usar os atalhos definidos no `package.json`, também pode executar `npm run setup` e `npm run start`, mas eles são apenas conveniência de desenvolvimento. Eles não significam que o aplicativo dependa de Node.js.
 
 ## Uso
 
@@ -84,13 +98,15 @@ Ao final, o aplicativo será criado em:
 dist/ATEM REC OBS Timecode.app
 ```
 
-O `.app` gerado pelo PyInstaller inclui o Python, PySide6, `pyatem` e as demais bibliotecas Python necessárias. Assim, **quem apenas for rodar o aplicativo final não precisa instalar Python, PySide6, pyatem ou Node.js separadamente**, desde que esteja usando um Mac compatível com o build gerado.
+O `.app` gerado pelo PyInstaller inclui o Python, PySide6, `pyatem`, PyUSB e as demais bibliotecas Python necessárias. Assim, **quem apenas for rodar o aplicativo final não precisa instalar Python, PySide6, pyatem ou Node.js separadamente**, desde que esteja usando um Mac compatível com o build gerado.
+
+Para Windows, a ideia é a mesma, mas o executável precisa ser gerado em uma máquina Windows. Em outras palavras: o código-fonte pode ser baixado e executado no Windows com `py app.py`, mas o pacote final para operador Windows deve ser criado no próprio Windows usando PyInstaller.
 
 ## Troubleshooting
 
 | Problema | Causa provável | Solução |
 |---|---|---|
-| “Biblioteca pyatem não encontrada” | O instalador ainda não foi executado em `python-gui`. | Execute `./scripts/install_all.sh` nessa pasta. |
+| “Biblioteca pyatem não encontrada” ou `No module named 'usb'` | As dependências ainda não foram instaladas no Python usado para abrir o app. | No macOS/Linux, execute `python3 -m pip install -r requirements.txt`; no Windows, execute `py -m pip install -r requirements.txt`. |
 | Não conecta na ATEM | IP incorreto ou redes diferentes. | Confirme o IP no ATEM Software Control e teste `ping IP_DA_ATEM`. |
 | OBS não atualiza | Fonte de texto não está lendo o arquivo correto. | Verifique se o OBS aponta para o mesmo TXT selecionado na aplicação. |
 | Timecode em velocidade errada | FPS configurado diferente da gravação. | Ajuste o FPS na interface para 30, 60 ou o valor usado no projeto. |

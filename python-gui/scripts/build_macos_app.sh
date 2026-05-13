@@ -10,22 +10,28 @@ if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
   exit 1
 fi
 
-if [ ! -d ".venv" ]; then
-  echo "==> Ambiente .venv não encontrado. Executando instalação completa."
-  "$PYTHON_BIN" -m venv .venv
-fi
+echo "==> Usando Python do sistema: $($PYTHON_BIN --version)"
 
-# shellcheck disable=SC1091
-source .venv/bin/activate
+echo "==> Instalando/validando dependências no Python do sistema"
+"$PYTHON_BIN" -m pip install --disable-pip-version-check -r requirements.txt
 
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+echo "==> Validando imports antes do build"
+"$PYTHON_BIN" - <<'PY'
+import PySide6
+import pyatem
+import usb
+print("Imports OK: PySide6, pyatem e usb")
+PY
 
-pyinstaller \
+echo "==> Gerando .app com PyInstaller"
+"$PYTHON_BIN" -m PyInstaller \
   --name "ATEM REC OBS Timecode" \
   --windowed \
   --clean \
   --collect-all pyatem \
+  --hidden-import usb \
+  --hidden-import usb.core \
+  --hidden-import usb.util \
   app.py
 
 cat <<'MSG'
