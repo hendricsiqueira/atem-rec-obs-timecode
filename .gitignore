@@ -1,4 +1,7 @@
 node_modules
 .DS_Store
+__pycache__/
+*.pyc
 rec-live.txt.tmp
+python-gui/rec-live.txt
 

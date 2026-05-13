@@ -44,10 +44,10 @@ python3 -m pip install --user --break-system-packages -r requirements.txt
 python3 app.py
 ```
 
-Se preferir instalar informando as bibliotecas manualmente, o comando equivalente no macOS Homebrew é:
+Se preferir instalar informando as bibliotecas manualmente com o Python oficial do macOS, use:
 
 ```bash
-python3 -m pip install --user --break-system-packages PySide6 pyatem pyusb pyinstaller
+python3 -m pip install --user PySide6 pyatem pyusb pyinstaller
 python3 app.py
 ```
 
@@ -68,7 +68,7 @@ Esse script tenta a instalação normal e, se o Python do Homebrew bloquear com 
 
 | Sistema | Instalar bibliotecas | Abrir a GUI |
 |---|---|---|
-| macOS/Linux normal | `python3 -m pip install -r requirements.txt` | `python3 app.py` |
+| macOS/Linux normal ou Python oficial do macOS | `python3 -m pip install --user -r requirements.txt` | `python3 app.py` |
 | macOS com Homebrew bloqueando pip | `python3 -m pip install --user --break-system-packages -r requirements.txt` | `python3 app.py` |
 | Windows | `py -m pip install -r requirements.txt` | `py app.py` |
 

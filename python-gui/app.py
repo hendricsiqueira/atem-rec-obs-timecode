@@ -98,7 +98,7 @@ class AtemMonitorWorker(QThread):
         except Exception as exc:  # pragma: no cover - depende do ambiente local
             self.event.emit(
                 "error",
-                "Bibliotecas Python não encontradas. Na pasta python-gui, execute: ./scripts/install_all.sh ou python3 -m pip install --user --break-system-packages -r requirements.txt",
+                "Bibliotecas Python não encontradas. Na pasta python-gui, execute: ./scripts/install_all.sh ou python3 -m pip install --user -r requirements.txt",
             )
             self.log.emit(f"Falha ao importar pyatem: {exc}")
             return

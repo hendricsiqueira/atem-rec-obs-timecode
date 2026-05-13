@@ -6,7 +6,7 @@ Este documento descreve os testes recomendados para validar o funcionamento da v
 
 - ATEM Mini Extreme ISO conectada à rede
 - Mac com Python 3.11 ou superior instalado
-- Dependências Python instaladas com `python3 -m pip install --user --break-system-packages -r python-gui/requirements.txt`
+- Dependências Python instaladas com `python3 -m pip install --user -r python-gui/requirements.txt` usando o Python oficial do macOS
 - IP da ATEM configurado na interface gráfica Python
 
 ## Cenários de Teste

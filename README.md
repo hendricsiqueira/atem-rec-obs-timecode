@@ -57,11 +57,11 @@ A documentação completa da versão com GUI está em [`python-gui/README.md`](.
 - ATEM e computador na mesma rede
 
 ## Instalação
-Para usar a **GUI Python**, entre na pasta `python-gui` e instale as dependências Python:
+Para usar a **GUI Python** com o Python oficial do macOS, entre na pasta `python-gui` e instale as dependências Python no espaço do usuário:
 
 ```bash
 cd python-gui
-python3 -m pip install --user --break-system-packages -r requirements.txt
+python3 -m pip install --user -r requirements.txt
 python3 app.py
 ```
 
