@@ -76,7 +76,7 @@ Se você preferir usar os atalhos definidos no `package.json`, também pode exec
 
 ## Uso
 
-Ao abrir a aplicação, informe o **IP da ATEM**, selecione o **FPS** usado na gravação e escolha o arquivo TXT que será lido pelo OBS. Depois, clique em **Conectar e iniciar**. A janela mostrará o status de conexão, o estado de REC e uma prévia exata do texto enviado ao arquivo.
+Ao abrir a aplicação, informe o **IP da ATEM**, selecione o **FPS** usado na gravação e escolha o arquivo TXT que será lido pelo OBS. Depois, clique em **Conectar e iniciar**. A janela mostrará o status de conexão, o estado de REC, um contador grande de **tempo de gravação** e uma prévia exata do texto enviado ao arquivo.
 
 No OBS, adicione uma fonte de texto e habilite **Read from file / Ler de arquivo**. Selecione o TXT configurado na aplicação. O conteúdo será atualizado automaticamente enquanto a ATEM estiver gravando.
 
@@ -108,6 +108,15 @@ dist/ATEM REC OBS Timecode.app
 
 O `.app` gerado pelo PyInstaller inclui o Python, PySide6, `pyatem`, PyUSB e as demais bibliotecas Python necessárias. Assim, **quem apenas for rodar o aplicativo final não precisa instalar Python, PySide6, pyatem ou Node.js separadamente**, desde que esteja usando um Mac compatível com o build gerado.
 
+Para personalizar o ícone do aplicativo, use um arquivo `.icns`. Você pode informar o caminho no momento do build:
+
+```bash
+cd python-gui
+ICON_FILE="/caminho/para/seu-icone.icns" ./scripts/build_macos_app.sh
+```
+
+Se preferir deixar o ícone fixo no projeto, salve o arquivo como `python-gui/assets/app.icns`. Quando esse arquivo existir, o script de build o usa automaticamente, sem precisar passar `ICON_FILE`.
+
 Para Windows, a ideia é a mesma, mas o executável precisa ser gerado em uma máquina Windows. Em outras palavras: o código-fonte pode ser baixado e executado no Windows com `py app.py`, mas o pacote final para operador Windows deve ser criado no próprio Windows usando PyInstaller.
 
 ## Troubleshooting
@@ -122,4 +131,4 @@ Para Windows, a ideia é a mesma, mas o executável precisa ser gerado em uma m�
 
 ## Próximos passos recomendados
 
-Os próximos refinamentos naturais são criar um ícone `.icns`, adicionar assinatura/notarização para distribuição fora do seu Mac e testar a leitura de `recording-status`/`recording-duration` em todos os modelos ATEM que serão usados na operação.
+Os próximos refinamentos naturais são adicionar assinatura/notarização para distribuição fora do seu Mac e testar a leitura de `recording-status`/`recording-duration` em todos os modelos ATEM que serão usados na operação.

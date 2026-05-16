@@ -11,6 +11,7 @@ ATEM, atualizando um arquivo TXT de uma linha para uso como overlay no OBS.
 from __future__ import annotations
 
 import os
+import re
 import sys
 import time
 from dataclasses import dataclass
@@ -274,7 +275,7 @@ class AtemGui(QMainWindow):
         self.default_output = self.script_dir / "rec-live.txt"
 
         self.setWindowTitle(APP_NAME)
-        self.setMinimumSize(860, 620)
+        self.setMinimumSize(860, 700)
         self._build_ui()
         self._build_menu()
         self._load_settings()
@@ -385,6 +386,22 @@ class AtemGui(QMainWindow):
         status_layout.addWidget(QLabel("REC:"), 0, 2)
         status_layout.addWidget(self.rec_badge, 0, 3)
 
+        duration_title = QLabel("Tempo de gravação:")
+        duration_title.setStyleSheet("color: #555; font-weight: 600;")
+        status_layout.addWidget(duration_title, 1, 0, 1, 4)
+
+        self.recording_time_label = QLabel("00:00:00:00")
+        recording_time_font = QFont("Menlo")
+        recording_time_font.setPointSize(38)
+        recording_time_font.setBold(True)
+        self.recording_time_label.setFont(recording_time_font)
+        self.recording_time_label.setAlignment(Qt.AlignCenter)
+        self.recording_time_label.setMinimumHeight(86)
+        self.recording_time_label.setStyleSheet(
+            "background: #0f172a; color: #94a3b8; border-radius: 12px; padding: 16px;"
+        )
+        status_layout.addWidget(self.recording_time_label, 2, 0, 1, 4)
+
         self.preview_label = QLabel("Aguardando REC na ATEM...")
         preview_font = QFont("Menlo")
         preview_font.setPointSize(20)
@@ -396,11 +413,11 @@ class AtemGui(QMainWindow):
         self.preview_label.setStyleSheet(
             "background: #111827; color: #f9fafb; border-radius: 10px; padding: 18px;"
         )
-        status_layout.addWidget(self.preview_label, 1, 0, 1, 4)
+        status_layout.addWidget(self.preview_label, 3, 0, 1, 4)
 
         self.file_hint = QLabel("")
         self.file_hint.setStyleSheet("color: #555;")
-        status_layout.addWidget(self.file_hint, 2, 0, 1, 4)
+        status_layout.addWidget(self.file_hint, 4, 0, 1, 4)
 
         root.addWidget(status_group)
 
@@ -571,6 +588,7 @@ class AtemGui(QMainWindow):
         self.connection_badge.setStyleSheet(self._badge_style("#6b7280"))
         self.rec_badge.setText("AGUARDANDO")
         self.rec_badge.setStyleSheet(self._badge_style("#6b7280"))
+        self._set_recording_time("00:00:00:00", "idle")
         self.preview_label.setText(text)
         self.statusBar().showMessage(text)
 
@@ -579,6 +597,7 @@ class AtemGui(QMainWindow):
         self.connection_badge.setStyleSheet(self._badge_style("#f59e0b"))
         self.rec_badge.setText("AGUARDANDO")
         self.rec_badge.setStyleSheet(self._badge_style("#6b7280"))
+        self._set_recording_time("00:00:00:00", "idle")
         self.preview_label.setText(text)
         self.statusBar().showMessage(text)
 
@@ -593,12 +612,14 @@ class AtemGui(QMainWindow):
         self.connection_badge.setStyleSheet(self._badge_style("#16a34a"))
         self.rec_badge.setText("SEM REC")
         self.rec_badge.setStyleSheet(self._badge_style("#6b7280"))
+        self._set_recording_time("00:00:00:00", "idle")
         self.preview_label.setText(text)
         self.statusBar().showMessage(text)
 
     def _apply_waiting_tc_state(self, text: str) -> None:
         self.rec_badge.setText("REC")
         self.rec_badge.setStyleSheet(self._badge_style("#dc2626"))
+        self._set_recording_time("--:--:--:--", "waiting")
         self.preview_label.setText(text)
         self.statusBar().showMessage(text)
 
@@ -607,15 +628,34 @@ class AtemGui(QMainWindow):
         self.connection_badge.setStyleSheet(self._badge_style("#16a34a"))
         self.rec_badge.setText("GRAVANDO")
         self.rec_badge.setStyleSheet(self._badge_style("#dc2626"))
+        self._set_recording_time(self._extract_timecode(text), "recording")
         self.preview_label.setText(text)
         self.statusBar().showMessage(text)
 
     def _apply_stopped_state(self, text: str) -> None:
         self.rec_badge.setText("PARADO")
         self.rec_badge.setStyleSheet(self._badge_style("#2563eb"))
+        self._set_recording_time(self._extract_timecode(text), "stopped")
         self.preview_label.setText(text)
         self.statusBar().showMessage(text)
         self._log(text)
+
+    def _extract_timecode(self, text: str) -> str:
+        match = re.search(r"\b\d{2}:\d{2}:\d{2}:\d{2}\b", text or "")
+        return match.group(0) if match else "00:00:00:00"
+
+    def _set_recording_time(self, text: str, state: str) -> None:
+        self.recording_time_label.setText(text)
+        colors = {
+            "recording": ("#7f1d1d", "#fecaca"),
+            "stopped": ("#1e3a8a", "#bfdbfe"),
+            "waiting": ("#78350f", "#fde68a"),
+            "idle": ("#0f172a", "#94a3b8"),
+        }
+        background, foreground = colors.get(state, colors["idle"])
+        self.recording_time_label.setStyleSheet(
+            f"background: {background}; color: {foreground}; border-radius: 12px; padding: 16px;"
+        )
 
     def _log(self, text: str) -> None:
         if not text:

@@ -5,3 +5,8 @@ __pycache__/
 rec-live.txt.tmp
 python-gui/rec-live.txt
 
+
+# Artefatos locais do PyInstaller/macOS
+python-gui/build/
+python-gui/dist/
+python-gui/*.spec
